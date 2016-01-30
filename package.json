@@ -1,0 +1,41 @@
+{
+  "name": "lacona-cli",
+  "version": "0.0.1",
+  "description": "CLI Tool for testing Lacona phrases",
+  "main": "lib/index.js",
+  "bin": "./lib/index.js",
+  "scripts": {
+    "build": "babel --stage 0 src --out-dir lib",
+    "prepublish": "npm run clean && npm run build",
+    "predemo": "npm run build & babel demo --out-dir tmpdemo & wait",
+    "demo": "node . tmpdemo/index.js",
+    "clean": "rimraf lib tmp tmpdemo"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brandonhorst/lacona-cli.git"
+  },
+  "keywords": [
+    "lacona",
+    "test",
+    "cli"
+  ],
+  "author": "@brandonhorst",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/brandonhorst/lacona-cli/issues"
+  },
+  "homepage": "https://github.com/brandonhorst/lacona-cli#readme",
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "lodash": "^3.10.1"
+  },
+  "devDependencies": {
+    "babel": "^5.8.34",
+    "lacona-phrase": "^0.9.1",
+    "lacona": "^0.35.0",
+    "chai": "^3.4.1",
+    "mocha": "^2.3.4",
+    "rimraf": "^2.5.0"
+  }
+}
