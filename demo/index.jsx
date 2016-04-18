@@ -1,12 +1,25 @@
 /** @jsx createElement */
 
 import _ from 'lodash'
-import { createElement, Phrase } from 'lacona-phrase'
+import { Parser } from 'lacona'
+import { ConsoleLacona } from '..'
+import { createElement, compile } from 'elliptical'
+import { DateTime } from 'elliptical-datetime'
+// import { Decimal } from 'lacona-phrase-number'
 
-export const grammar = (
-  <choice>
-    <literal text='alpha' />
-    <literal text='beta' />
-    <literal text='charlie' />
-  </choice>
+const grammar = (
+  <sequence>
+    <literal text='remind me to '/>
+    <label text='ACTIVITY'>
+      <freetext trimmed limit={2} splitOn=' ' />
+    </label>
+    <sequence optional>
+      <literal text=' ' />
+      <DateTime prepositions />
+    </sequence>
+  </sequence>
 )
+
+const parse = compile(grammar)
+const cons = new ConsoleLacona(parse)
+cons.render()

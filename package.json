@@ -8,7 +8,7 @@
     "build": "babel --stage 0 src --out-dir lib",
     "prepublish": "npm run clean && npm run build",
     "predemo": "npm run build & babel demo --out-dir tmpdemo & wait",
-    "demo": "node . tmpdemo/index.js",
+    "demo": "node tmpdemo/index.js",
     "clean": "rimraf lib tmp tmpdemo"
   },
   "repository": {

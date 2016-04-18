@@ -38,10 +38,8 @@ function colorizeWord({text, input, argument, placeholder, category}) {
 }
 
 export class ConsoleLacona {
-  constructor ({parser}) {
-    this.parser = parser
-
-    this.parser.on('update', this.parse.bind(this, true))
+  constructor (parse) {
+    this.parse = parse
 
     this.oldInput = ''
 
@@ -51,7 +49,6 @@ export class ConsoleLacona {
       debug: true,
       title: 'my window title'
     })
-
 
     this.suggestionBox = blessed.list({
       left: 'center',
@@ -114,7 +111,7 @@ export class ConsoleLacona {
     })
 
     this.inputBox.on('keypress', (key) => {
-      this.parse()
+      this.doParse()
     })
 
     this.screen.append(this.inputBox)
@@ -123,17 +120,17 @@ export class ConsoleLacona {
     this.inputBox.focus()
   }
 
-  parse (bypassSameCheck = false) {
+  doParse () {
     process.nextTick(() => {
       const input = this.inputBox.getValue()
 
-      if (!bypassSameCheck && this.oldInput === input) {
+      if (this.oldInput === input) {
         return
       } else {
         this.oldInput = input
       }
 
-      const output = _.chain(this.parser.parseArray(input))
+      const output = _.chain(this.parse(input))
         .sortBy(({score}) => -score)
         .map('words')
         .map((words) => _.chain(words)
