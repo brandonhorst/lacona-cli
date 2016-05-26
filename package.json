@@ -1,14 +1,14 @@
 {
   "name": "lacona-cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "CLI Tool for building Lacona addons",
   "main": "index.js",
   "bin": "index.js",
   "os": [
     "darwin"
   ],
-  "engines" : {
-    "node" : ">=4.0.0"
+  "engines": {
+    "node": ">=4.0.0"
   },
   "scripts": {},
   "repository": {
