@@ -1,16 +1,16 @@
 {
   "name": "lacona-cli",
   "version": "0.0.1",
-  "description": "CLI Tool for testing Lacona phrases",
-  "main": "lib/index.js",
-  "bin": "./lib/index.js",
-  "scripts": {
-    "build": "babel --stage 0 src --out-dir lib",
-    "prepublish": "npm run clean && npm run build",
-    "predemo": "npm run build & babel demo --out-dir tmpdemo & wait",
-    "demo": "node tmpdemo/index.js",
-    "clean": "rimraf lib tmp tmpdemo"
+  "description": "CLI Tool for building Lacona addons",
+  "main": "index.js",
+  "bin": "index.js",
+  "os": [
+    "darwin"
+  ],
+  "engines" : {
+    "node" : ">=4.0.0"
   },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brandonhorst/lacona-cli.git"
@@ -18,7 +18,8 @@
   "keywords": [
     "lacona",
     "test",
-    "cli"
+    "cli",
+    "build"
   ],
   "author": "@brandonhorst",
   "license": "MIT",
@@ -27,15 +28,17 @@
   },
   "homepage": "https://github.com/brandonhorst/lacona-cli#readme",
   "dependencies": {
-    "blessed": "^0.1.81",
-    "lodash": "^3.10.1"
+    "colors": "^1.1.2",
+    "commander": "^2.9.0",
+    "fstream": "^1.0.9",
+    "fstream-ignore": "^1.0.5",
+    "fstream-npm": "^1.1.0",
+    "inquirer": "^1.0.2",
+    "jsonfile": "^2.3.1",
+    "lodash": "^4.12.0",
+    "npm-safe-name": "^1.1.0",
+    "request": "^2.72.0",
+    "tar-pack": "^3.1.3"
   },
-  "devDependencies": {
-    "babel": "^5.8.34",
-    "lacona-phrase": "^0.9.1",
-    "lacona": "^0.35.0",
-    "chai": "^3.4.1",
-    "mocha": "^2.3.4",
-    "rimraf": "^2.5.0"
-  }
+  "devDependencies": {}
 }
