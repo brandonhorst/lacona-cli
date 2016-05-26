@@ -1,10 +1,10 @@
 {
   "name": "lacona-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI Tool for building Lacona addons",
   "main": "index.js",
-  "bin" : {
-    "lacona" : "index.js"
+  "bin": {
+    "lacona": "index.js"
   },
   "os": [
     "darwin"
