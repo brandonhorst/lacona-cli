@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "CLI Tool for building Lacona addons",
   "main": "index.js",
-  "bin": "index.js",
+  "bin" : {
+    "lacona" : "index.js"
+  },
   "os": [
     "darwin"
   ],
