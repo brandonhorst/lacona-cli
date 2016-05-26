@@ -421,7 +421,7 @@ function ls () {
 }
 
 function link () {
-  console.log('Installing')
+  console.log('Linking')
   childProcess.execSync('npm install', {encoding: 'utf8'})
 
   const newDir = path.join(userCommandsDir, pkg.name)
@@ -442,10 +442,12 @@ function link () {
   fs.symlinkSync(process.cwd(), newDir)
   console.log('Reloading Addons')
   childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+  console.log('Linked Successfully')
 }
 
 function install (packageName) {
   if (!packageName) {
+    console.log(`Installing ${pkg.name}`)
     const newPath = path.join(userCommandsDir, pkg.name)
 
     rimraf.sync(newPath)
@@ -453,7 +455,16 @@ function install (packageName) {
 
     fstreamNpm({path: process.cwd()})
       .pipe(fstream.Writer(newPath))
+      .on('close', () => {
+        console.log('Reloading Addons')
+        childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+        console.log(`${pkg.name} installed successfully`)
+      })
+      .on('error', (err) => {
+        console.log(`ERROR: Write failed - ${err}`)
+      })
   } else { // package name provided
+    console.log(`Installing ${packageName}`)
     request(
       `https://registry.npmjs.com/${packageName}/latest`,
       {json: true},
@@ -474,6 +485,8 @@ function install (packageName) {
             if (err) {
               console.log(`Error unpacking code from ${packageName}`)
             } else {
+              console.log('Reloading addons')
+              childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
               console.log(`${packageName} installed successfully`)
             }
           })
