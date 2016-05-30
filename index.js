@@ -14,8 +14,10 @@ const https = require('https')
 const request = require('request')
 const tarPack = require('tar-pack')
 const fstream = require('fstream')
-const fstreamNpm = require('fstream-npm')
+const FstreamNPM = require('fstream-npm')
 const rimraf = require('rimraf')
+const touch = require('touch')
+const inherits = require('util').inherits
 
 const userCommandsDir = path.join(os.homedir(), 'Library/Application Support/Lacona/Addons')
 
@@ -78,7 +80,7 @@ export const MyNewCommand = {
 
   execute (result) {
     console.log('executing MyNewCommand')
-    runApplescript(\`display alert $\{result\}!\`)
+    runApplescript({script: \`display alert "$\{result\}"\`})
   },
 
   describe (${results.config ? '{config}' : ''}) {
@@ -123,6 +125,7 @@ function generateExtensionsSource (results) {
     return `var elliptical = require('elliptical')
 var laconaPhrases = require('lacona-phrases')
 var laconaAPI = require('lacona-api')
+
 var literal = elliptical.createElement.bind(null, 'literal')
 
 var MyNewCommand = {
@@ -130,7 +133,7 @@ var MyNewCommand = {
 
   execute: function execute (result) {
     console.log('executing MyNewCommand')
-    laconaAPI.runApplescript(\`display alert $\{result\}!\`)
+    laconaAPI.runApplescript({script: \`display alert "$\{result\}"\`})
   },
 
   describe: function describe (${results.config ? 'model' : ''}) {
@@ -148,10 +151,11 @@ exports.default = [MyNewCommand]
   } else { //extension
     return `var elliptical = require('elliptical')
 var laconaPhrases = require('lacona-phrases')
+
 var literal = elliptical.createElement.bind(null, 'literal')
 
 var MyNewExtension = {
-  extends: [URL],
+  extends: [laconaPhrases.URL],
 
   describe: function describe (${results.config ? 'model' : ''}) {
     return literal({
@@ -183,7 +187,7 @@ function generateConfig (results) {
         }
       }
     }
-  } else if (results.config && results.type === 'extensions') {
+  } else if (results.config && results.type === 'extension') {
     return {
       [configify(results.name)]: {
         title: results.title,
@@ -366,6 +370,7 @@ function init (callback) {
     if (obj.confirm) {
       const newPackage = generatePackageJson(pkg, obj)
       jsonfile.writeFileSync('./package.json', newPackage, {spaces: 2})
+      touch.sync('./.gitignore')
 
       if (obj.type) {
         if (obj.transpile) {
@@ -421,8 +426,13 @@ function ls () {
 }
 
 function link () {
-  console.log('Linking')
-  childProcess.execSync('npm install', {encoding: 'utf8'})
+  console.log(`Linking ${pkg.name}`)
+
+  try {
+    childProcess.execSync('npm install', {encoding: 'utf8'})
+  } catch (e) {
+    console.log(`ERROR: npm install failed: ${e}`)
+  }
 
   const newDir = path.join(userCommandsDir, pkg.name)
   try {
@@ -448,21 +458,54 @@ function link () {
 function install (packageName) {
   if (!packageName) {
     console.log(`Installing ${pkg.name}`)
+
+    try {
+      childProcess.execSync('npm install', {encoding: 'utf8'})
+    } catch (e) {
+      console.log(`ERROR: npm install failed: ${e}`)
+      return
+    }
+
     const newPath = path.join(userCommandsDir, pkg.name)
 
     rimraf.sync(newPath)
     fs.mkdirSync(newPath)
 
-    fstreamNpm({path: process.cwd()})
-      .pipe(fstream.Writer(newPath))
+    const packageStream = new fstream.Reader('./package.json')
+    
+    new FstreamNPM({path: './', type: 'Directory', isDirectory: true})
+      .pipe(new fstream.Writer(newPath))
       .on('close', () => {
-        console.log('Reloading Addons')
-        childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
-        console.log(`${pkg.name} installed successfully`)
+
+        // copy package.json manually
+        //  for some reason, fstream-npm appears to have indeterminate behavior
+        //  about copying package.json
+        fstream
+          .Reader('./package.json')
+          .pipe(fstream.Writer(path.join(newPath, 'package.json')))
+          .on('error', (err) => {
+            console.log(`ERROR: package.json write failed - ${err}`)
+          })
+          .on('close', () => {
+            console.log('Reloading Addons')
+
+            try {
+              childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+            } catch (e) {
+              console.log(`ERROR: reload addons osascript failed: ${e}`)
+              return
+            }
+
+            console.log(`${pkg.name} installed successfully`)
+          })
       })
       .on('error', (err) => {
         console.log(`ERROR: Write failed - ${err}`)
       })
+      .on('err', (err) => {
+        console.log(`ERROR: Write failed - ${err}`)
+      })
+
   } else { // package name provided
     console.log(`Installing ${packageName}`)
     request(
@@ -486,7 +529,12 @@ function install (packageName) {
               console.log(`Error unpacking code from ${packageName}`)
             } else {
               console.log('Reloading addons')
-              childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+              try {
+                childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+              } catch (e) {
+                console.log(`ERROR: reload addons osascript failed: ${e}`)
+                return
+              }
               console.log(`${packageName} installed successfully`)
             }
           })
@@ -501,6 +549,18 @@ function uninstall (packageName = pkg.name) {
   if (fs.existsSync(newPath)) {
     console.log(`Uninstalling addon ${packageName}`)
     rimraf.sync(newPath)
+
+    console.log('Reloading addons')
+    try {
+      childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+    } catch (e) {
+      console.log(`ERROR: reload addons osascript failed: ${e}`)
+      return
+    }
+
+    console.log(`${packageName} uninstalled successfully`)
+  } else {
+    console.log(`${packageName} is not currently installed`)
   }
 }
 
