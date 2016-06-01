@@ -398,6 +398,17 @@ function safeWriteFileSync (filename, content, options = {}, pkg = fs) {
   }
 }
 
+function reload () {
+  console.log('Reloading Addons')
+
+  try {
+    childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+  } catch (e) {
+    console.log(`ERROR: reload addons osascript failed: ${e}`)
+    return
+  }
+}
+
 function ls () {
   const packages = []
   const commandDirs = fs.readdirSync(userCommandsDir)
@@ -450,8 +461,9 @@ function link () {
 
   console.log(`Symlinking to ${newDir}`)
   fs.symlinkSync(process.cwd(), newDir)
-  console.log('Reloading Addons')
-  childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+
+  reload()
+
   console.log('Linked Successfully')
 }
 
@@ -487,15 +499,7 @@ function install (packageName) {
             console.log(`ERROR: package.json write failed - ${err}`)
           })
           .on('close', () => {
-            console.log('Reloading Addons')
-
-            try {
-              childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
-            } catch (e) {
-              console.log(`ERROR: reload addons osascript failed: ${e}`)
-              return
-            }
-
+            reload()
             console.log(`${pkg.name} installed successfully`)
           })
       })
@@ -528,13 +532,7 @@ function install (packageName) {
             if (err) {
               console.log(`Error unpacking code from ${packageName}`)
             } else {
-              console.log('Reloading addons')
-              try {
-                childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
-              } catch (e) {
-                console.log(`ERROR: reload addons osascript failed: ${e}`)
-                return
-              }
+              reload()
               console.log(`${packageName} installed successfully`)
             }
           })
@@ -550,13 +548,7 @@ function uninstall (packageName = pkg.name) {
     console.log(`Uninstalling addon ${packageName}`)
     rimraf.sync(newPath)
 
-    console.log('Reloading addons')
-    try {
-      childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
-    } catch (e) {
-      console.log(`ERROR: reload addons osascript failed: ${e}`)
-      return
-    }
+    reload()
 
     console.log(`${packageName} uninstalled successfully`)
   } else {
@@ -578,25 +570,29 @@ commander
   .action(init)
 
 commander
-  .command('ls')
-  .alias('list')
-  .description('list installed packages')
-  .action(ls)
-
-commander
   .command('install [package]')
   .description('install the specified package (or the current directory)')
   .action(install)
 
 commander
-  .command('uninstall [package]')
-  .description('uninstall the specified package (or the current directory)')
-  .action(uninstall)
-
-commander
   .command('logs')
   .description('view the system logs about Lacona')
   .action(logs)
+
+commander
+  .command('ls')
+  .description('list installed packages')
+  .action(ls)
+
+commander
+  .command('reload')
+  .description('reload the Lacona addon cache')
+  .action(reload)
+
+commander
+  .command('uninstall [package]')
+  .description('uninstall the specified package (or the current directory)')
+  .action(uninstall)
 
 commander.parse(process.argv)
 
