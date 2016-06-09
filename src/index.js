@@ -16,7 +16,7 @@ const FstreamNPM = require('fstream-npm')
 const rimraf = require('rimraf')
 const updateNotifier = require('update-notifier')
 
-const cliPackage = require('./package.json')
+const cliPackage = require('../package.json')
 
 updateNotifier({pkg: cliPackage, updateCheckInterval: 1000 * 60 * 60}).notify()
 
