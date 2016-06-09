@@ -231,7 +231,7 @@ function generatePackageJson (existing, results) {
     ),
     keywords: existing.keywords || [
       'lacona',
-      `lacona-${results.type}`
+      'lacona-addon'
     ],
     license: results.license,
     repository: existing.repository || (results.repo
@@ -302,6 +302,32 @@ function defaultGitRepo () {
   return u
 }
 
+function writeDotFile (filename, ...additions) {
+  const source = getDefaultDotIgnore(...additions)
+  safeWriteFileSync(filename, source)
+}
+
+function maybeAppendDotFile (filename, ...additions) {
+  const existing = fs.readFileSync(filename, {encoding: 'utf8'})
+  const toAppend = []
+  for (let addition of additions) {
+    const regex = `^\\s*${addition}\\s*$`
+    if (!(new RegExp(regex, 'm')).test(existing)) {
+      toAppend.push(addition)
+    }
+  }
+
+  if (toAppend.length > 0) {
+    const newSource = `${existing}
+
+# Lacona Additions
+${toAppend.join('\n')}
+`
+    console.log(`Modifying existing ignore file ${filename}`)
+    fs.writeFileSync(filename, newSource)
+  }
+}
+
 function init (callback) {
   return inquirer.prompt([{
     name: 'title',
@@ -367,25 +393,45 @@ function init (callback) {
     default: true,
     message: 'Look good?'
   }]).then((obj) => {
-    if (obj.confirm) {
-      const newPackage = generatePackageJson(pkg, obj)
-      jsonfile.writeFileSync('./package.json', newPackage, {spaces: 2})
-      touch.sync('./.gitignore')
+    try {
+      if (obj.confirm) {
+        const newPackage = generatePackageJson(pkg, obj)
+        jsonfile.writeFileSync('./package.json', newPackage, {spaces: 2})
 
-      if (obj.type) {
-        if (obj.transpile) {
-          const source = generateExtensionsSourceTranspile(obj)
-          fs.mkdirSync('./src')
-          safeWriteFileSync('./src/extensions.jsx', source)
-        } else {
-          const source = generateExtensionsSource(obj)
-          safeWriteFileSync('./extensions.js', source)
+        if (obj.type) {
+          if (obj.transpile) {
+            const source = generateExtensionsSourceTranspile(obj)
+            fs.mkdirSync('./src')
+            safeWriteFileSync('./src/extensions.jsx', source)
+
+            if (!fs.existsSync('./.gitignore')) {
+              writeDotFile('./.gitignore', 'build')
+            } else {
+              maybeAppendDotFile('./.gitignore', 'build')
+            }
+
+            if (!fs.existsSync('./.npmignore')) {
+              writeDotFile('./.npmignore', 'src')
+            } else {
+              maybeAppendDotFile('./.npmignore', 'src')
+            }
+          } else {
+            const source = generateExtensionsSource(obj)
+            safeWriteFileSync('./extensions.js', source)
+
+            if (!fs.existsSync('./.gitignore')) {
+              const gitignoreSource = getDefaultDotIgnore()
+              safeWriteFileSync('./.gitignore', gitignoreSource)
+            }
+          }
         }
-      } 
-      if (!_.isUndefined(obj.config)) {
-        const newConfig = generateConfig(obj) 
-        safeWriteFileSync('./config.json', newConfig, {spaces: 2}, jsonfile)
+        if (!_.isUndefined(obj.config)) {
+          const newConfig = generateConfig(obj)
+          safeWriteFileSync('./config.json', newConfig, {spaces: 2}, jsonfile)
+        }
       }
+    } catch (e) {
+      console.log(`Error occurred: ${e}`)
     }
   })
 }
