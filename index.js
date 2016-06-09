@@ -9,15 +9,18 @@ const childProcess = require('child_process')
 const inquirer = require('inquirer')
 const npmSafeName = require('npm-safe-name')
 const jsonfile = require('jsonfile')
-const colors = require('colors/safe')
 const https = require('https')
 const request = require('request')
 const tarPack = require('tar-pack')
 const fstream = require('fstream')
 const FstreamNPM = require('fstream-npm')
 const rimraf = require('rimraf')
-const touch = require('touch')
 const inherits = require('util').inherits
+const updateNotifier = require('update-notifier')
+
+const cliPackage = require('./package.json')
+
+updateNotifier({pkg: cliPackage, updateCheckInterval: 1000 * 60 * 60}).notify()
 
 const userCommandsDir = path.join(os.homedir(), 'Library/Application Support/Lacona/Addons')
 
