@@ -9,13 +9,11 @@ const childProcess = require('child_process')
 const inquirer = require('inquirer')
 const npmSafeName = require('npm-safe-name')
 const jsonfile = require('jsonfile')
-const https = require('https')
 const request = require('request')
 const tarPack = require('tar-pack')
 const fstream = require('fstream')
 const FstreamNPM = require('fstream-npm')
 const rimraf = require('rimraf')
-const inherits = require('util').inherits
 const updateNotifier = require('update-notifier')
 
 const cliPackage = require('./package.json')
@@ -69,7 +67,7 @@ jspm_packages
 # Additional Lacona ignores
 ${additional.join('\n')}
 `
-  }
+}
 
 function generateExtensionsSourceTranspile (results) {
   if (results.type === 'command') {
@@ -99,7 +97,7 @@ export const MyNewCommand = {
 
 export default [MyNewCommand]
 `
-  } else { //extension
+  } else { // extension
     return `/** @jsx createElement */
 import { createElement } from 'elliptical'
 import { URL } from 'lacona-phrases'
@@ -151,7 +149,7 @@ var MyNewCommand = {
 
 exports.default = [MyNewCommand]
 `
-  } else { //extension
+  } else { // extension
     return `var elliptical = require('elliptical')
 var laconaPhrases = require('lacona-phrases')
 
@@ -180,7 +178,7 @@ function generateConfig (results) {
     return {
       [configify(results.name)]: {
         title: results.title,
-        type: "object",
+        type: 'object',
         properties: {
           message: {
             title: 'Alert message',
@@ -194,7 +192,7 @@ function generateConfig (results) {
     return {
       [configify(results.name)]: {
         title: results.title,
-        type: "object",
+        type: 'object',
         properties: {
           homepage: {
             title: 'Homepage URL',
@@ -227,9 +225,9 @@ function generatePackageJson (existing, results) {
     }),
     scripts: existing.scripts || (results.transpile
       ? {
-        build: "mkdir -p build; browserify src/extensions.jsx -t babelify -o build/extensions.js -x lacona-phrases -x elliptical -x lacona-api --standalone extensions --extension=jsx",
-        clean: "rimraf build",
-        prepublish: "npm run clean && npm run build"
+        build: 'mkdir -p build; browserify src/extensions.jsx -t babelify -o build/extensions.js -x lacona-phrases -x elliptical -x lacona-api --standalone extensions --extension=jsx',
+        clean: 'rimraf build',
+        prepublish: 'npm run clean && npm run build'
       } : {}
     ),
     keywords: existing.keywords || [
@@ -243,7 +241,6 @@ function generatePackageJson (existing, results) {
         url: results.repo
       } : undefined
     ),
-  "author": "@brandonhorst",
     devDependencies: existing.devDependencies || (results.transpile
       ? {
         'babel-plugin-transform-react-jsx': '^6.8.0',
@@ -280,7 +277,7 @@ function configify (name) {
 function defaultGitRepo () {
   let gconf
   try {
-    const gconf = fs.readFileSync('.git/config', 'utf8')
+    gconf = fs.readFileSync('.git/config', 'utf8')
   } catch (e) {
     return
   }
@@ -335,7 +332,7 @@ function init (callback) {
   return inquirer.prompt([{
     name: 'title',
     message: 'Addon Title [for humans]:',
-    default: pkgLacona.title,
+    default: pkgLacona.title
   }, {
     name: 'name',
     message: 'Package Name [for computers]:',
@@ -451,7 +448,7 @@ function reload () {
   console.log('Reloading Addons')
 
   try {
-    childProcess.execSync(`osascript -e 'tell application "Lacona" to reload addons'`, {encoding: 'utf8'})
+    childProcess.execSync('osascript -e \'tell application "Lacona" to reload addons\'', {encoding: 'utf8'})
   } catch (e) {
     console.log(`ERROR: reload addons osascript failed: ${e}`)
     return
@@ -485,36 +482,37 @@ function ls () {
   }
 }
 
-function link () {
-  console.log(`Linking ${pkg.name}`)
+// link (not currently used)
+// function link () {
+//   console.log(`Linking ${pkg.name}`)
 
-  try {
-    childProcess.execSync('npm install', {encoding: 'utf8'})
-  } catch (e) {
-    console.log(`ERROR: npm install failed: ${e}`)
-  }
+//   try {
+//     childProcess.execSync('npm install', {encoding: 'utf8'})
+//   } catch (e) {
+//     console.log(`ERROR: npm install failed: ${e}`)
+//   }
 
-  const newDir = path.join(userCommandsDir, pkg.name)
-  try {
-    const newDirStats = fs.lstatSync(newDir)
-    if (newDirStats.isSymbolicLink()) {
-      console.log(`Unlinking existing ${newDir}`)
-      fs.unlinkSync(newDir)
-    } else {
-      console.log(`ERROR: Non-symlink exists at ${newDir}`)
-      return
-    }
-  } catch (e) {
-    // if the file doesn't exist, we don't care
-  }
+//   const newDir = path.join(userCommandsDir, pkg.name)
+//   try {
+//     const newDirStats = fs.lstatSync(newDir)
+//     if (newDirStats.isSymbolicLink()) {
+//       console.log(`Unlinking existing ${newDir}`)
+//       fs.unlinkSync(newDir)
+//     } else {
+//       console.log(`ERROR: Non-symlink exists at ${newDir}`)
+//       return
+//     }
+//   } catch (e) {
+//     // if the file doesn't exist, we don't care
+//   }
 
-  console.log(`Symlinking to ${newDir}`)
-  fs.symlinkSync(process.cwd(), newDir)
+//   console.log(`Symlinking to ${newDir}`)
+//   fs.symlinkSync(process.cwd(), newDir)
 
-  reload()
+//   reload()
 
-  console.log('Linked Successfully')
-}
+//   console.log('Linked Successfully')
+// }
 
 function install (packageName) {
   if (!packageName) {
@@ -532,15 +530,13 @@ function install (packageName) {
     rimraf.sync(newPath)
     fs.mkdirSync(newPath)
 
-    const packageStream = new fstream.Reader('./package.json')
-    
     new FstreamNPM({path: './', type: 'Directory', isDirectory: true})
       .pipe(new fstream.Writer(newPath))
       .on('close', () => {
-
         // copy package.json manually
         //  for some reason, fstream-npm appears to have indeterminate behavior
         //  about copying package.json
+
         fstream
           .Reader('./package.json')
           .pipe(fstream.Writer(path.join(newPath, 'package.json')))
@@ -558,7 +554,6 @@ function install (packageName) {
       .on('err', (err) => {
         console.log(`ERROR: Write failed - ${err}`)
       })
-
   } else { // package name provided
     console.log(`Installing ${packageName}`)
     request(
