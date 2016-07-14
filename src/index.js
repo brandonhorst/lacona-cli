@@ -15,6 +15,8 @@ const fstream = require('fstream')
 const FstreamNPM = require('fstream-npm')
 const rimraf = require('rimraf')
 const updateNotifier = require('update-notifier')
+const userHome = require('user-home')
+const defaults = require('./defaults')
 
 const cliPackage = require('../package.json')
 
@@ -95,7 +97,7 @@ export const MyNewCommand = {
   }
 }
 
-export default [MyNewCommand]
+export const extensions = [MyNewCommand]
 `
   } else { // extension
     return `/** @jsx createElement */
@@ -116,28 +118,28 @@ export const MyNewExtension = {
   }
 }
 
-export default [MyNewExtension]
+export const extensions = [MyNewExtension]
 `
   }
 }
 
 function generateExtensionsSource (results) {
   if (results.type === 'command') {
-    return `var elliptical = require('elliptical')
-var laconaPhrases = require('lacona-phrases')
-var laconaAPI = require('lacona-api')
+    return `const elliptical = require('elliptical')
+const laconaPhrases = require('lacona-phrases')
+const laconaAPI = require('lacona-api')
 
-var literal = elliptical.createElement.bind(null, 'literal')
+const literal = elliptical.createElement.bind(null, 'literal')
 
-var MyNewCommand = {
+const MyNewCommand = {
   extends: [laconaPhrases.Command],
 
-  execute: function execute (result) {
+  execute (result) {
     console.log('executing MyNewCommand')
     laconaAPI.runApplescript({script: \`display alert "$\{result\}"\`})
   },
 
-  describe: function describe (${results.config ? 'model' : ''}) {
+  describe (${results.config ? 'model' : ''}) {
     return literal({
       text: 'test my new command',
       value: ${results.config
@@ -147,18 +149,18 @@ var MyNewCommand = {
   }
 }
 
-exports.default = [MyNewCommand]
+exports.extensions = [MyNewCommand]
 `
   } else { // extension
-    return `var elliptical = require('elliptical')
-var laconaPhrases = require('lacona-phrases')
+    return `const elliptical = require('elliptical')
+const laconaPhrases = require('lacona-phrases')
 
-var literal = elliptical.createElement.bind(null, 'literal')
+const literal = elliptical.createElement.bind(null, 'literal')
 
-var MyNewExtension = {
+const MyNewExtension = {
   extends: [laconaPhrases.URL],
 
-  describe: function describe (${results.config ? 'model' : ''}) {
+  describe (${results.config ? 'model' : ''}) {
     return literal({
       text: 'my homepage',
       value: ${results.config
@@ -168,7 +170,7 @@ var MyNewExtension = {
   }
 }
 
-exports.default = [MyNewExtension]
+exports.extensions = [MyNewExtension]
 `
   }
 }
@@ -208,25 +210,25 @@ function generateConfig (results) {
 }
 
 function generatePackageJson (existing, results) {
+  const npmDesc = results.description
+    ? `Lacona Addon to ${results.description}`
+    : undefined
   return _.assign({}, existing, {
     name: results.name,
-    version: existing.version || '1.0.0',
-    description: existing.description || results.description,
+    version: existing.version || results.version || '1.0.0',
+    description: existing.description || npmDesc,
     main: existing.main || results.transpile
-      ? 'build/extensions.js'
-      : 'extensions.js',
+      ? 'lib/index.js'
+      : 'index.js',
     lacona: _.assign({}, existing.lacona, {
       title: results.title,
       description: results.description,
-      extensions: existing.extensions || (
-        results.transpile ? 'build/extensions.js' : 'extensions.js'
-      ),
       config: existing.config || 'config.json'
     }),
     scripts: existing.scripts || (results.transpile
       ? {
-        build: 'mkdir -p build; browserify src/extensions.jsx -t babelify -o build/extensions.js -x lacona-phrases -x elliptical -x lacona-api --standalone extensions --extension=jsx',
-        clean: 'rimraf build',
+        build: 'babel src --out-dir lib',
+        clean: 'rimraf lib',
         prepublish: 'npm run clean && npm run build'
       } : {}
     ),
@@ -241,13 +243,17 @@ function generatePackageJson (existing, results) {
         url: results.repo
       } : undefined
     ),
+    dependencies: existing.dependencies || {
+      'lacona-phrases': '^1.0.0',
+      'lacona-api': '^1.0.0',
+      'elliptical': '^1.0.0'
+    },
     devDependencies: existing.devDependencies || (results.transpile
       ? {
-        'babel-plugin-transform-react-jsx': '^6.8.0',
-        'babel-preset-es2015': '^6.9.0',
-        'babelify': '^7.3.0',
-        'browserify': '^13.0.1',
-        'rimraf': '^2.5.2'
+        'babel-plugin-transform-react-jsx': '^6.0.0',
+        'babel-preset-es2015': '^6.0.0',
+        'babel-cli': '^6.0.0',
+        'rimraf': '^2.0.0'
       } : {}
     ),
     babel: existing.babel || (
@@ -335,7 +341,7 @@ function init (callback) {
     default: pkgLacona.title
   }, {
     name: 'name',
-    message: 'Package Name [for computers]:',
+    message: 'Package Name [for npm]:',
     validate: (title) => {
       return npmSafeName(npmify(title))
         ? true
@@ -365,7 +371,9 @@ function init (callback) {
       {name: 'provide a new command', value: 'command', short: 'command'},
       {name: 'extend existing commands', value: 'extension', short: 'extension'}
     ],
-    when: () => !pkgLacona.extensions
+    when: () => {
+      return !fs.existsSync('./index.js') && !fs.existsSync('./src/index.js')
+    }
   }, {
     name: 'config',
     type: 'confirm',
@@ -375,8 +383,8 @@ function init (callback) {
     name: 'transpile',
     type: 'confirm',
     default: true,
-    message: 'Use Transpilation? [recommended, required to use npm packages]',
-    when: () => !pkg.scripts && !pkgLacona.config && !pkgLacona.extensions
+    message: 'Use Transpilation? [recommended]',
+    when: () => !fs.existsSync('./index.js') && !fs.existsSync('./src/index.js')
   }, {
     name: 'repo',
     message: 'git repository:',
@@ -387,6 +395,11 @@ function init (callback) {
     message: 'license:',
     default: 'MIT',
     when: () => !pkg.license
+  }, {
+    name: 'version',
+    message: 'version:',
+    default: '1.0.0',
+    when: () => !pkg.version
   }, {
     name: 'confirm',
     type: 'confirm',
@@ -402,12 +415,12 @@ function init (callback) {
           if (obj.transpile) {
             const source = generateExtensionsSourceTranspile(obj)
             fs.mkdirSync('./src')
-            safeWriteFileSync('./src/extensions.jsx', source)
+            safeWriteFileSync('./src/index.jsx', source)
 
             if (!fs.existsSync('./.gitignore')) {
-              writeDotFile('./.gitignore', 'build')
+              writeDotFile('./.gitignore', 'lib')
             } else {
-              maybeAppendDotFile('./.gitignore', 'build')
+              maybeAppendDotFile('./.gitignore', 'lib')
             }
 
             if (!fs.existsSync('./.npmignore')) {
@@ -417,7 +430,7 @@ function init (callback) {
             }
           } else {
             const source = generateExtensionsSource(obj)
-            safeWriteFileSync('./extensions.js', source)
+            safeWriteFileSync('./index.js', source)
 
             if (!fs.existsSync('./.gitignore')) {
               const gitignoreSource = getDefaultDotIgnore()
@@ -445,7 +458,7 @@ function safeWriteFileSync (filename, content, options = {}, pkg = fs) {
 }
 
 function reload () {
-  console.log('Reloading Addons')
+  console.log('Reloading Lacona Addons')
 
   try {
     childProcess.execSync('osascript -e \'tell application "Lacona" to reload addons\'', {encoding: 'utf8'})
@@ -456,153 +469,120 @@ function reload () {
 }
 
 function ls () {
-  const packages = []
-  const commandDirs = fs.readdirSync(userCommandsDir)
-  for (let commandDirName of commandDirs) {
-    const commandDir = path.join(userCommandsDir, commandDirName)
-    const packageJSON = path.join(commandDir, 'package.json')
-    let packageContents, packageObj
-    try {
-      packageContents = fs.readFileSync(packageJSON, {encoding: 'utf8'})
-      packageObj = JSON.parse(packageContents)
-    } catch (e) {
-      continue
-    }
-    if (packageObj.lacona) {
-      packages.push({
-        name: packageObj.name,
-        title: packageObj.lacona.title,
-        version: packageObj.version
-      })
-    }
-  }
-
-  for (let pkg of packages) {
-    console.log(`${pkg.title || 'Untitled'} (${pkg.name}@${pkg.version})`)
-  }
+  try {
+    const addons = defaults.readSync('io.lacona.Lacona', 'addons')
+    _.forEach(addons, addon => console.log(addon))
+  } catch (e) {} // noop - does not exist is fine
 }
 
-// link (not currently used)
-// function link () {
-//   console.log(`Linking ${pkg.name}`)
+function addToAddons (packageName) {
+  let addons
+  try {
+    addons = defaults.readSync('io.lacona.Lacona', 'addons')
+  } catch (e) {
+    addons = []
+  }
+  const index = _.findIndex(addons, {name: packageName})
+  if (index !== -1) {
+    return true
+  } 
+  console.log(`Adding ${packageName} to the Lacona settings`)
+  addons.push({name: packageName, enabled: true})
+  try {
+    defaults.writeSync('io.lacona.Lacona', 'addons', addons)
+  } catch (e) {
+    console.error('Error writing Lacona settings', e)
+    return false
+  }
+  console.log(`Successfully added ${packageName} to the Lacona settings`)
+  return true
+}
 
-//   try {
-//     childProcess.execSync('npm install', {encoding: 'utf8'})
-//   } catch (e) {
-//     console.log(`ERROR: npm install failed: ${e}`)
-//   }
+function removeFromAddons (packageName) {
+  console.log(`Removing ${packageName} from the Lacona settings`)
+  let addons
+  try {
+    addons = defaults.readSync('io.lacona.Lacona', 'addons')
+  } catch (e) {
+    addons = []
+  }
+  const index = _.findIndex(addons, {name: packageName})
+  if (index === -1) {
+    console.log(`${packageName} was not found in Lacona settings`)
+    return true
+  }
 
-//   const newDir = path.join(userCommandsDir, pkg.name)
-//   try {
-//     const newDirStats = fs.lstatSync(newDir)
-//     if (newDirStats.isSymbolicLink()) {
-//       console.log(`Unlinking existing ${newDir}`)
-//       fs.unlinkSync(newDir)
-//     } else {
-//       console.log(`ERROR: Non-symlink exists at ${newDir}`)
-//       return
-//     }
-//   } catch (e) {
-//     // if the file doesn't exist, we don't care
-//   }
+  addons.splice(index, 1)
 
-//   console.log(`Symlinking to ${newDir}`)
-//   fs.symlinkSync(process.cwd(), newDir)
+  try {
+    defaults.writeSync('io.lacona.Lacona', 'addons', addons)
+  } catch (e) {
+    console.error('Error writing Lacona settings', e)
+    return false
+  }
+  console.log(`Successfully added ${packageName} to the Lacona settings`)
+  return true
+}
 
-//   reload()
+function npmInstall (packageOrPath) {
+  console.log(`Installing dependencies via npm`)
+  try {
+    childProcess.execSync('npm install', {encoding: 'utf8'})
+  } catch (e) {
+    console.log(`ERROR: npm install failed: ${e}`)
+    return false
+  }
 
-//   console.log('Linked Successfully')
-// }
+  console.log(`Installing ${packageOrPath} via npm`)
+  try {
+    childProcess.execSync(`npm install ${packageOrPath}`, {
+      encoding: 'utf8',
+      cwd: userCommandsDir
+    })
+  } catch (e) {
+    console.log(`ERROR: npm install ${packageOrPath} failed: ${e}`)
+    return false
+  }
+  console.log(`Successfully installed ${packageOrPath} via npm`)
+  return true
+}
+
+function npmUninstall (packageName) {
+  console.log(`Uninstalling ${packageName} via npm`)
+  try {
+    childProcess.execSync(`npm uninstall ${packageName}`, {
+      encoding: 'utf8',
+      cwd: userCommandsDir
+    })
+  } catch (e) {
+    console.log(`ERROR: npm uninstall failed: ${e}`)
+    return false
+  }
+  console.log(`Successfully uninstalled ${packageName} via npm`)
+  return true
+}
+
 
 function install (packageName) {
   if (!packageName) {
-    console.log(`Installing ${pkg.name}`)
-
-    try {
-      childProcess.execSync('npm install', {encoding: 'utf8'})
-    } catch (e) {
-      console.log(`ERROR: npm install failed: ${e}`)
-      return
-    }
-
-    const newPath = path.join(userCommandsDir, pkg.name)
-
-    rimraf.sync(newPath)
-    fs.mkdirSync(newPath)
-
-    new FstreamNPM({path: './', type: 'Directory', isDirectory: true})
-      .pipe(new fstream.Writer(newPath))
-      .on('close', () => {
-        // copy package.json manually
-        //  for some reason, fstream-npm appears to have indeterminate behavior
-        //  about copying package.json
-
-        fstream
-          .Reader('./package.json')
-          .pipe(fstream.Writer(path.join(newPath, 'package.json')))
-          .on('error', (err) => {
-            console.log(`ERROR: package.json write failed - ${err}`)
-          })
-          .on('close', () => {
-            reload()
-            console.log(`${pkg.name} installed successfully`)
-          })
-      })
-      .on('error', (err) => {
-        console.log(`ERROR: Write failed - ${err}`)
-      })
-      .on('err', (err) => {
-        console.log(`ERROR: Write failed - ${err}`)
-      })
+    npmInstall(process.cwd()) && addToAddons(pkg.name) && reload()
   } else { // package name provided
-    console.log(`Installing ${packageName}`)
-    request(
-      `https://registry.npmjs.com/${packageName}/latest`,
-      {json: true},
-      (err, res, body) => {
-        if (err) {
-          console.log(`${packageName} could not be loaded from npm : ${err}`)
-          return
-        }
-        const laconaInfo = body.lacona
-        if (!laconaInfo) {
-          console.log(`${packageName} is on npm, but is not a Lacona addon`)
-          return
-        }
-        const tarballURL = body.dist.tarball
-        const newPath = path.join(userCommandsDir, packageName)
-        return request(tarballURL).pipe(
-          tarPack.unpack(newPath, (err) => {
-            if (err) {
-              console.log(`Error unpacking code from ${packageName}`)
-            } else {
-              reload()
-              console.log(`${packageName} installed successfully`)
-            }
-          })
-        )
-      }
-    )
+    npmInstall(packageName) && addToAddons(packageName) && reload()
   }
 }
 
 function uninstall (packageName = pkg.name) {
-  const newPath = path.join(userCommandsDir, packageName)
-  if (fs.existsSync(newPath)) {
-    console.log(`Uninstalling addon ${packageName}`)
-    rimraf.sync(newPath)
-
-    reload()
-
-    console.log(`${packageName} uninstalled successfully`)
-  } else {
-    console.log(`${packageName} is not currently installed`)
-  }
+  npmUninstall(packageName) && removeFromAddons(packageName) && reload()
 }
 
 function logs () {
-  const output = childProcess.execSync('syslog | grep -i lacona', {encoding: 'utf8'})
-  console.log(output)
+  const logPath = path.join(userHome, 'Library/Logs/Lacona/app.log')
+  try {
+    const content = fs.readFileSync(logPath, {encoding: 'utf8'})
+    console.log(content)
+  } catch (e) {
+    console.error(`Log file not found: ${e}`)
+  }
 }
 
 commander
