@@ -9,11 +9,6 @@ const childProcess = require('child_process')
 const inquirer = require('inquirer')
 const npmSafeName = require('npm-safe-name')
 const jsonfile = require('jsonfile')
-const request = require('request')
-const tarPack = require('tar-pack')
-const fstream = require('fstream')
-const FstreamNPM = require('fstream-npm')
-const rimraf = require('rimraf')
 const updateNotifier = require('update-notifier')
 const userHome = require('user-home')
 const defaults = require('./defaults')
@@ -485,7 +480,7 @@ function addToAddons (packageName) {
   const index = _.findIndex(addons, {name: packageName})
   if (index !== -1) {
     return true
-  } 
+  }
   console.log(`Adding ${packageName} to the Lacona settings`)
   addons.push({name: packageName, enabled: true})
   try {
@@ -525,7 +520,7 @@ function removeFromAddons (packageName) {
 }
 
 function npmInstall (packageOrPath) {
-  console.log(`Installing dependencies via npm`)
+  console.log('Installing dependencies via npm')
   try {
     childProcess.execSync('npm install', {encoding: 'utf8'})
   } catch (e) {
@@ -561,7 +556,6 @@ function npmUninstall (packageName) {
   console.log(`Successfully uninstalled ${packageName} via npm`)
   return true
 }
-
 
 function install (packageName) {
   if (!packageName) {
