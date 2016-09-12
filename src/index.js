@@ -565,9 +565,9 @@ function npmUninstall (packageName) {
 
 function install (packageName) {
   if (!packageName) {
-    npmInstall(process.cwd()) && addToAddons(pkg.name) && reload()
+    npmInstall(process.cwd()) && addToAddons(pkg.name) && setDevMode(pkg.name)
   } else { // package name provided
-    npmInstall(packageName) && addToAddons(packageName) && reload()
+    npmInstall(packageName) && addToAddons(packageName) && setDevMode(packageName)
   }
 }
 
@@ -583,6 +583,12 @@ function logs () {
   } catch (e) {
     console.error(`Log file not found: ${e}`)
   }
+}
+
+function setDevMode (packageName = pkg.name) {
+  defaults.writeSync('io.lacona.Lacona', 'devModeAddon', packageName)
+  console.log(`Setting developer mode for ${packageName}`)
+  reload()
 }
 
 commander
@@ -617,6 +623,11 @@ commander
   .command('uninstall [package]')
   .description('uninstall the specified package (or the current directory)')
   .action(uninstall)
+
+commander
+  .command('dev [package]')
+  .description('enable developer mode (remove delay) for the specified package (or the current directory)')
+  .action(setDevMode)
 
 commander.parse(process.argv)
 
