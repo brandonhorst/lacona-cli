@@ -15,6 +15,7 @@ Commands:
   ls                   list installed packages
   reload               reload the Lacona addon cache
   uninstall [package]  uninstall the specified package (or the current directory)
+  dev [package]        enable developer mode (remove delay) for the specified package (or the current directory)
 
 Options:
 
