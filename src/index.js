@@ -520,14 +520,6 @@ function removeFromAddons (packageName) {
 }
 
 function npmInstall (packageOrPath) {
-  console.log('Installing dependencies via npm')
-  try {
-    childProcess.execSync('npm install', {encoding: 'utf8'})
-  } catch (e) {
-    console.log(`ERROR: npm install failed: ${e}`)
-    return false
-  }
-
   console.log(`Installing ${packageOrPath} via npm`)
   try {
     childProcess.execSync(`npm install ${packageOrPath}`, {
