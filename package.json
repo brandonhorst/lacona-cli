@@ -1,6 +1,6 @@
 {
   "name": "lacona-cli",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "CLI Tool for building Lacona addons",
   "main": "lib/index.js",
   "bin": {
