@@ -515,11 +515,16 @@ function removeFromAddons (packageName) {
     console.error('Error writing Lacona settings', e)
     return false
   }
-  console.log(`Successfully added ${packageName} to the Lacona settings`)
+  console.log(`Successfully removed ${packageName} from the Lacona settings`)
   return true
 }
 
+function escapeShell (input) {
+  return `"${input.replace('"', '\\"')}"`
+}
+
 function npmInstall (packageOrPath) {
+  const escaped = escapeShell(packageOrPath)
   console.log('Installing dependencies via npm')
   try {
     childProcess.execSync('npm install', {encoding: 'utf8'})
@@ -528,24 +533,25 @@ function npmInstall (packageOrPath) {
     return false
   }
 
-  console.log(`Installing ${packageOrPath} via npm`)
+  console.log(`Installing ${escaped} via npm`)
   try {
-    childProcess.execSync(`npm install ${packageOrPath}`, {
+    childProcess.execSync(`npm install ${escaped}`, {
       encoding: 'utf8',
       cwd: userCommandsDir
     })
   } catch (e) {
-    console.log(`ERROR: npm install ${packageOrPath} failed: ${e}`)
+    console.log(`ERROR: npm install ${escaped} failed: ${e}`)
     return false
   }
-  console.log(`Successfully installed ${packageOrPath} via npm`)
+  console.log(`Successfully installed ${escaped} via npm`)
   return true
 }
 
 function npmUninstall (packageName) {
-  console.log(`Uninstalling ${packageName} via npm`)
+  const escaped = escapeShell(packageName)
+  console.log(`Uninstalling ${escaped} via npm`)
   try {
-    childProcess.execSync(`npm uninstall ${packageName}`, {
+    childProcess.execSync(`npm uninstall ${escaped}`, {
       encoding: 'utf8',
       cwd: userCommandsDir
     })
@@ -553,7 +559,7 @@ function npmUninstall (packageName) {
     console.log(`ERROR: npm uninstall failed: ${e}`)
     return false
   }
-  console.log(`Successfully uninstalled ${packageName} via npm`)
+  console.log(`Successfully uninstalled ${escaped} via npm`)
   return true
 }
 
